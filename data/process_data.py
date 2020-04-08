@@ -39,6 +39,9 @@ def clean_data(df):
     df_expanded.columns = col_names
     # set the id 
     df_expanded['id'] = df['id']
+    # merge both dataframes and get rid of old category
+    df_expanded = pd.merge(df_expanded, df)
+    df_expanded.drop('categories', axis=1, inplace=True)
     # drop duplicates
     num_duplicates = len(df_expanded[df_expanded.duplicated()])
     df_expanded.drop_duplicates(inplace=True)
@@ -53,7 +56,7 @@ def save_data(df, database_filename):
         database_filename {string} -- name of the database file
     """
     engine = create_engine(f'sqlite:///{database_filename}')
-    df.to_sql(f'{database_filename}', engine, index=False)
+    df.to_sql(f'DisasterTable', engine, index=False)
     print(f'Database {database_filename} was created')
 
 

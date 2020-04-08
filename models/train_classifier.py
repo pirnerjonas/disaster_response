@@ -1,24 +1,70 @@
+import os
 import sys
+import pickle
+
+import pandas as pd
+from sklearn.compose import ColumnTransformer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.linear_model import RidgeClassifier
+from sklearn.metrics import classification_report
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.pipeline import Pipeline
+from sqlalchemy import create_engine
+from nltk.stem import WordNetLemmatizer
+from nltk.tokenize import word_tokenize
 
 
 def load_data(database_filepath):
-    pass
+    
+    engine = create_engine(f'sqlite:///{database_filepath}')
+    df = pd.read_sql_table('DisasterTable',con=engine)
+    X = df['message']
+    Y = df.drop(['id','message','original','genre'],axis=1)
+    category_names = Y.columns
+    return X, Y, category_names
 
 
 def tokenize(text):
-    pass
+    tokens = word_tokenize(text)
+    lemmatizer = WordNetLemmatizer()
+
+    clean_tokens = []
+    for tok in tokens:
+        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
+        clean_tokens.append(clean_tok)
+
+    return clean_tokens
 
 
 def build_model():
-    pass
+    params = {
+        'tfidf__use_idf': [True, False]
+    }
+
+    pipeline = Pipeline([
+        ('vect', CountVectorizer(tokenizer=tokenize)),
+        ('tfidf', TfidfTransformer()),
+        ('ridge', MultiOutputClassifier(RidgeClassifier()))
+    ])
+
+    gs_pipeline = GridSearchCV(pipeline, params, cv=2, n_jobs=-1)
+ 
+    return gs_pipeline
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
+    prediction_df = pd.DataFrame(model.predict(X_test), columns=category_names)
+    for i, category in enumerate(category_names):
+        pred_cat = prediction_df.iloc[:,i]
+        true_cat = Y_test.iloc[:,i]
+        print(f'Category: {category}')
+        print(classification_report(pred_cat, true_cat))
+        print('='*80)
 
 
 def save_model(model, model_filepath):
-    pass
+    pickle.dump(model, open(model_filepath, 'wb'))
 
 
 def main():
