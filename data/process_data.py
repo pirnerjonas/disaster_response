@@ -35,6 +35,8 @@ def clean_data(df):
     col_names = df_expanded.iloc[0,:].str.replace('-\d','')
     # replace all non-digits with empty string to just get the numbers
     df_expanded.replace('\D','', regex=True, inplace=True)
+    # to numeric
+    df_expanded = df_expanded.apply(pd.to_numeric)
     # set the column names
     df_expanded.columns = col_names
     # set the id 
