@@ -16,7 +16,14 @@ from nltk.tokenize import word_tokenize
 
 
 def load_data(database_filepath):
+    """loads the data from the database
     
+    Arguments:
+        database_filepath {path} -- path to the database
+    
+    Returns:
+        X, Y, category_names -- returns the features, labels and category names
+    """
     engine = create_engine(f'sqlite:///{database_filepath}')
     df = pd.read_sql_table('DisasterTable',con=engine)
     X = df['message']
@@ -26,6 +33,14 @@ def load_data(database_filepath):
 
 
 def tokenize(text):
+    """tokenization and lemmatization of raw text input
+    
+    Arguments:
+        text {string} -- raw text
+    
+    Returns:
+        list of tokens -- returns the tokenized and lemmatized text
+    """
     tokens = word_tokenize(text)
     lemmatizer = WordNetLemmatizer()
 
@@ -38,22 +53,35 @@ def tokenize(text):
 
 
 def build_model():
+    """builds a classification pipeline and performs gridsearch cross-validation.
+    
+    Returns:
+        sklearn pipeline -- the pipeline with the corresponding tuning parameters
+    """
+    # define the tuning parameters
     params = {
         'tfidf__use_idf': [True, False]
     }
-
+    # define the pipeline with the transformation steps
     pipeline = Pipeline([
-        ('vect', CountVectorizer(tokenizer=tokenize)),
+        ('vect', CountVectorizer()),
         ('tfidf', TfidfTransformer()),
         ('ridge', MultiOutputClassifier(RidgeClassifier()))
     ])
-
+    # perform gridsearch and cross-validation
     gs_pipeline = GridSearchCV(pipeline, params, cv=2, n_jobs=-1)
- 
     return gs_pipeline
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
+    """prints the classification report for every class in the dataset
+    
+    Arguments:
+        model {sklearn pipeline} -- fitted pipeline
+        X_test {dataframe} -- features of the test dataset
+        Y_test {dataframe} -- labels of the test dataset
+        category_names {list} -- category names
+    """
     prediction_df = pd.DataFrame(model.predict(X_test), columns=category_names)
     for i, category in enumerate(category_names):
         pred_cat = prediction_df.iloc[:,i]
@@ -64,6 +92,12 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
 
 def save_model(model, model_filepath):
+    """saves the pipeline model
+    
+    Arguments:
+        model {sklearn pipeline} -- fitted pipeline
+        model_filepath {string} -- path to fitted pipeline
+    """
     pickle.dump(model, open(model_filepath, 'wb'))
 
 
