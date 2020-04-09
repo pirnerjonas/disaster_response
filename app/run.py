@@ -8,6 +8,7 @@ from nltk.tokenize import word_tokenize
 from flask import Flask
 from flask import render_template, request, jsonify
 from plotly.graph_objs import Bar
+from plotly.graph_objs import Heatmap
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
 
@@ -39,12 +40,20 @@ model = joblib.load("../models/classifier.pkl")
 def index():
     
     # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
+
+    # label distribution
+    label_freq = df.drop(['id','message','original','genre'], axis=1).sum()
+    label_freq = label_freq.reset_index().rename(columns={'index':'category', 
+                                                          0:'frequency'})
+    # nice names
+    label_freq['category'] = pd.Series(label_freq['category']).str.replace('_', ' ')
+    
+    # label correlation
+    df_corr = df.drop(['id','message','original','genre'], axis=1).corr()
     
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
     graphs = [
         {
             'data': [
@@ -63,6 +72,47 @@ def index():
                     'title': "Genre"
                 }
             }
+        },
+
+        {
+            'data': [
+                Bar(
+                    x=label_freq['category'],
+                    y=label_freq['frequency']
+                )
+            ],
+
+            'layout': {
+                'title': 'Distribution of Categories',
+                'yaxis': {
+                    'title': "Count"
+                },
+                'xaxis': {
+                    'title': "Category"
+                }
+            }
+        },
+
+        {
+            'data': [
+                Heatmap(
+                    z=df_corr.values.tolist(),
+                    x=df_corr.columns.str.replace('_', ' ').tolist(),
+                    y=df_corr.columns.str.replace('_', ' ').tolist(),
+
+                )
+            ],
+
+            'layout': {
+                'title': 'Correlation of Categories',
+                'yaxis': {
+                    'title': "Category"
+                },
+                'xaxis': {
+                    'title': "Category"
+                }
+            }
+
         }
     ]
     
