@@ -1,9 +1,9 @@
 import os
-import sys
 import pickle
-
+import sys
 import pandas as pd
-from sklearn.compose import ColumnTransformer
+
+from sklearn.externals import joblib
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.linear_model import RidgeClassifier
 from sklearn.metrics import classification_report
@@ -11,8 +11,8 @@ from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.pipeline import Pipeline
 from sqlalchemy import create_engine
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
+
+from tokenizer import Tokenizer
 
 
 def load_data(database_filepath):
@@ -32,26 +32,6 @@ def load_data(database_filepath):
     return X, Y, category_names
 
 
-def tokenize(text):
-    """tokenization and lemmatization of raw text input
-    
-    Arguments:
-        text {string} -- raw text
-    
-    Returns:
-        list of tokens -- returns the tokenized and lemmatized text
-    """
-    tokens = word_tokenize(text)
-    lemmatizer = WordNetLemmatizer()
-
-    clean_tokens = []
-    for tok in tokens:
-        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
-        clean_tokens.append(clean_tok)
-
-    return clean_tokens
-
-
 def build_model():
     """builds a classification pipeline and performs gridsearch cross-validation.
     
@@ -64,7 +44,7 @@ def build_model():
     }
     # define the pipeline with the transformation steps
     pipeline = Pipeline([
-        ('vect', CountVectorizer()),
+        ('vect', CountVectorizer(max_df=0.95, tokenizer=Tokenizer.tokenize)),
         ('tfidf', TfidfTransformer()),
         ('ridge', MultiOutputClassifier(RidgeClassifier()))
     ])
@@ -98,7 +78,7 @@ def save_model(model, model_filepath):
         model {sklearn pipeline} -- fitted pipeline
         model_filepath {string} -- path to fitted pipeline
     """
-    pickle.dump(model, open(model_filepath, 'wb'))
+    joblib.dump(model, open(model_filepath, 'wb'))
 
 
 def main():
